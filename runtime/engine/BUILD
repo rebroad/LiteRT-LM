@@ -241,6 +241,7 @@ cc_binary(
         "//runtime/conversation",
         "//runtime/conversation:io_types",
         "//runtime/executor:executor_settings_base",
+        "//runtime/proto:sampler_params_cc_proto",
         "//runtime/util:litert_status_util",
     ],
 )
