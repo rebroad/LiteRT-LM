@@ -72,9 +72,11 @@ absl::StatusOr<Environment&> GetEnvironment(EngineSettings& engine_settings,
         ABSL_LOG(INFO) << "Setting dispatch library path from "
                           "main_executor_settings: "
                        << main_executor_settings.GetLitertDispatchLibDir();
-      } else {
+      } else if (backend == Backend::NPU) {
 #if defined(__ANDROID__) || defined(__EMSCRIPTEN__)
-        // Otherwise, use the directory of the model file.
+        // On Android/WASM, infer the dispatch directory from the model file
+        // only for NPU runs. Other backends should not require the dispatch
+        // delegate library to be present.
         std::string model_path(
             main_executor_settings.GetModelAssets().GetPath().value_or(""));
         std::filesystem::path path(model_path);
