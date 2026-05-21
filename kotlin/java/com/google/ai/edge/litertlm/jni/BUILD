@@ -59,6 +59,6 @@ cc_binary(
             "@rules_java//toolchains:jni"
         ],
     }) + [
-        "//runtime/core:engine_impl",  # buildcleaner: keep
+        "//runtime/engine:engine_impl_selected",
     ],
 )

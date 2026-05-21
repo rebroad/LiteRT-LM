@@ -1,0 +1,2 @@
+common --disk_cache=/var/tmp/litert-bazel-disk-cache
+build --config=public_cache

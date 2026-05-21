@@ -14,3 +14,4 @@
 - Multi-session / engine behavior belongs here.
 - HTTP server presentation and app-side request wiring belong in Gallery.
 - Avoid duplicate HTTP server code across the repos unless you are temporarily cherry-picking a porting commit, and delete the duplicate afterward.
+- Never assume a user does not want a feature just because it is inconvenient; only ask when the requirement is genuinely ambiguous.

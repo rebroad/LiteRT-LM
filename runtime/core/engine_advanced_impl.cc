@@ -40,6 +40,7 @@
 #include "runtime/executor/audio_executor_settings.h"
 #include "runtime/executor/audio_executor_utils.h"
 #include "runtime/executor/executor_settings_base.h"
+#include "runtime/executor/audio_litert_compiled_model_executor.h"
 #include "runtime/executor/litert_compiled_model_executor_utils.h"
 #include "runtime/executor/llm_executor.h"
 #include "runtime/executor/llm_executor_settings.h"
@@ -337,14 +338,16 @@ absl::StatusOr<std::unique_ptr<Engine>> EngineAdvancedImpl::Create(
         ThreadedExecutionManager::Create(
             tokenizer.get(), model_resources.get(), std::move(executor),
             std::move(vision_executor_settings_ptr),
-            std::move(audio_executor_settings_ptr), &litert_env));
+            std::move(audio_executor_settings_ptr), &litert_env,
+            /*audio_executor=*/nullptr));
   } else {
     ASSIGN_OR_RETURN(
         execution_manager,
         SerialExecutionManager::Create(
             tokenizer.get(), model_resources.get(), std::move(executor),
             std::move(vision_executor_settings_ptr),
-            std::move(audio_executor_settings_ptr), &litert_env));
+            std::move(audio_executor_settings_ptr), &litert_env,
+            /*audio_executor=*/nullptr));
   }
 
   if (benchmark_info.has_value()) {

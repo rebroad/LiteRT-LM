@@ -721,8 +721,19 @@ ResourceManager::AcquireExecutorWithContextHandler(
 }
 
 absl::Status ResourceManager::TryLoadingVisionExecutor() {
-  return absl::InvalidArgumentError(
-      "Vision executor backend is not supported.");
+  absl::MutexLock lock(vision_executor_mutex_);
+  if (vision_executor_ != nullptr) {
+    return absl::OkStatus();
+  }
+  if (!vision_executor_settings_) {
+    return absl::InvalidArgumentError("Vision options should not be null.");
+  }
+  RETURN_IF_ERROR(MaybeCreateLitertEnv());
+  ASSIGN_OR_RETURN(
+      vision_executor_,
+      VisionLiteRtCompiledModelExecutor::Create(*vision_executor_settings_,
+                                                *litert_env_));
+  return absl::OkStatus();
 }
 
 absl::StatusOr<std::unique_ptr<VisionExecutor>>
@@ -738,14 +749,6 @@ ResourceManager::AcquireVisionExecutor() {
 }
 
 absl::Status ResourceManager::TryLoadingAudioExecutor() {
-  bool is_llm_gpu_artisan = false;
-  if (audio_executor_settings_ && audio_executor_settings_->GetBackend() ==
-                                      litert::lm::Backend::GPU_ARTISAN) {
-    RET_CHECK(llm_executor_settings_.has_value());
-    is_llm_gpu_artisan =
-        (llm_executor_settings_->GetBackend() == Backend::GPU_ARTISAN);
-  }
-
   absl::MutexLock lock(audio_executor_mutex_);
   if (audio_executor_ != nullptr) {
     return absl::OkStatus();
@@ -753,14 +756,11 @@ absl::Status ResourceManager::TryLoadingAudioExecutor() {
   if (!audio_executor_settings_) {
     return absl::InvalidArgumentError("Audio options should not be null.");
   }
-  if (audio_executor_settings_->GetBackend() == litert::lm::Backend::CPU ||
-      audio_executor_settings_->GetBackend() == litert::lm::Backend::GPU) {
-    return absl::InvalidArgumentError(
-        "Audio executor backend is not supported.");
-  } else {
-    return absl::InvalidArgumentError(
-        "Audio executor backend is not supported.");
-  }
+  RETURN_IF_ERROR(MaybeCreateLitertEnv());
+  ASSIGN_OR_RETURN(
+      audio_executor_,
+      AudioLiteRtCompiledModelExecutor::Create(*audio_executor_settings_,
+                                               *litert_env_));
   return absl::OkStatus();
 }
 
