@@ -146,6 +146,50 @@ cc_test(
 )
 
 cc_library(
+    name = "engine_advanced_impl",
+    srcs = ["engine_advanced_impl.cc"],
+    visibility = [":engine_impl_users"],
+    deps = ENGINE_IMPL_COMMON_DEPS + [
+        ":session_advanced",
+        "//runtime/framework/resource_management:execution_manager",
+        "//runtime/framework/resource_management:serial_execution_manager",
+        "//runtime/framework/resource_management:threaded_execution_manager",
+        "//runtime/util:litert_util",
+    ] + select({
+        "//conditions:default": [],
+    }),
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "engine_advanced_impl_test",
+    srcs = ["engine_advanced_impl_test.cc"],
+    # The LiteRT GPU path is not ready yet. Only test the CPU path.
+    args = ["--gunit_filter=-EngineTest.CreateEngineGPU*"],
+    data = ["//runtime/testdata"],
+    tags = ["requires-mac-inputs:hard"],  # Required for running on Forge on Mac.
+    deps = [
+        ":engine_advanced_impl",  # buildcleaner: keep
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "//runtime/engine:engine_factory",
+        "//runtime/engine:engine_interface",
+        "//runtime/engine:engine_settings",
+        "//runtime/engine:io_types",
+        "//runtime/executor:executor_settings_base",
+        "//runtime/executor:llm_executor_settings",
+        "//runtime/proto:sampler_params_cc_proto",
+        "//runtime/util:scoped_file",
+        "//runtime/util:test_utils",
+    ],
+)
+
+cc_library(
     name = "pipeline",
     srcs = ["pipeline.cc"],
     hdrs = ["pipeline.h"],
@@ -308,6 +352,87 @@ cc_test(
         ],
         "//conditions:default": [
             "@litert//litert/cc:litert_environment",
+            "@litert//litert/cc:litert_environment_options",
+        ],
+    }),
+)
+
+cc_library(
+    name = "session_advanced",
+    srcs = ["session_advanced.cc"],
+    hdrs = ["session_advanced.h"],
+    deps = [
+        ":session_utils",
+        "@com_google_absl//absl/base:nullability",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/log:absl_log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "//runtime/components:tokenizer",
+        "//runtime/engine:engine_interface",
+        "//runtime/engine:engine_settings",
+        "//runtime/engine:io_types",
+        "//runtime/framework/resource_management:execution_manager",
+        "//runtime/proto:sampler_params_cc_proto",
+        "//runtime/util:litert_status_util",
+    ],
+)
+
+cc_test(
+    name = "session_advanced_test",
+    srcs = ["session_advanced_test.cc"],
+    args = [
+        "--gtest_filter=-SessionAdvancedTest.ProcessAndCombineContentsTextAndAudioSuccess:"
+        + "SessionAdvancedTest.ProcessAndCombineContentsTextAudioTextSuccess",
+    ],
+    data = [
+        "//runtime/components/testdata",
+        "//runtime/testdata",
+    ],
+    tags = ["requires-mac-inputs:hard"],  # Required for running on Forge on Mac.
+    deps = [
+        ":session_advanced",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
+        "@litert//litert/cc:litert_environment",
+        "@litert//litert/cc:litert_tensor_buffer",
+        "@litert//litert/test:matchers",
+        "//runtime/components:sentencepiece_tokenizer",
+        "//runtime/components:model_resources",
+        "//runtime/components:tokenizer",
+        "//runtime/components/constrained_decoding:fake_constraint",
+        "//runtime/engine:engine_settings",
+        "//runtime/engine:io_types",
+        "//runtime/executor:audio_executor_settings",
+        "//runtime/executor:audio_litert_compiled_model_executor",
+        "//runtime/executor:executor_settings_base",
+        "//runtime/executor:fake_llm_executor",
+        "//runtime/executor:llm_executor_io_types",
+        "//runtime/framework/resource_management:execution_manager",
+        "//runtime/framework/resource_management:threaded_execution_manager",
+        "//runtime/util:convert_tensor_buffer",
+        "//runtime/util:scoped_file",
+        "//runtime/util:test_utils",
+    ] + select({
+        "@litert//litert:litert_link_capi_so": [
+            "@litert//litert/cc:litert_api_with_dynamic_runtime",
+        ],
+        "//conditions:default": [
             "@litert//litert/cc:litert_environment_options",
         ],
     }),

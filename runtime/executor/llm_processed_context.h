@@ -46,9 +46,17 @@ class LlmProcessedContext : public ProcessedContext {
     lora_id_ = lora_id;
   }
   ProcessedTokens& processed_tokens() override { return processed_tokens_; }
+  const ProcessedTokens& processed_tokens() const {
+    return processed_tokens_;
+  }
 
   absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
   kv_cache_buffers() {
+    return kv_cache_buffers_;
+  }
+
+  const absl::flat_hash_map<absl::string_view, ::litert::TensorBuffer>&
+  kv_cache_buffers() const {
     return kv_cache_buffers_;
   }
 

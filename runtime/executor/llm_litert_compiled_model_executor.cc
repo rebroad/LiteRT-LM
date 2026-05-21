@@ -82,6 +82,18 @@ constexpr absl::string_view kPrefillSignatureRunner = "prefill";
 constexpr absl::string_view kDecodeSignatureRunner = "decode";
 constexpr int kDynamicDimValue = -1;
 
+absl::StatusOr<std::unique_ptr<LlmProcessedContext>> CloneLlmProcessedContext(
+    const LlmProcessedContext& processed_context) {
+  absl::flat_hash_map<absl::string_view, TensorBuffer> kv_cache_buffers;
+  for (const auto& [name, buffer] : processed_context.kv_cache_buffers()) {
+    LITERT_ASSIGN_OR_RETURN(auto buffer_copy, buffer.Duplicate());
+    kv_cache_buffers.emplace(name, std::move(buffer_copy));
+  }
+  return std::make_unique<LlmProcessedContext>(
+      processed_context.lora_id(), std::move(kv_cache_buffers),
+      processed_context.processed_tokens());
+}
+
 absl::Status InitializeEmbeddingLookups(
     litert::Environment& env, ModelResources& resources,
     std::unique_ptr<EmbeddingLookupManager>& embedding_lookup,
@@ -1342,6 +1354,85 @@ absl::Status LlmLiteRtCompiledModelExecutorBase::SampleLogits(
 absl::Status LlmLiteRtCompiledModelExecutorBase::UpdateExecutorSettings(
     const LlmExecutorSettings& executor_settings) {
   executor_settings_ = executor_settings;
+  return absl::OkStatus();
+}
+
+absl::StatusOr<RuntimeConfig>
+LlmLiteRtCompiledModelExecutorBase::GetRuntimeConfig() const {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Runtime config is not available because the executor context is "
+         "missing.";
+  return llm_context_->runtime_config();
+}
+
+absl::Status LlmLiteRtCompiledModelExecutorBase::UpdateRuntimeConfig(
+    const RuntimeConfig& runtime_config) {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Runtime config is not available because the executor context is "
+         "missing.";
+  llm_context_->runtime_config() = runtime_config;
+  return absl::OkStatus();
+}
+
+absl::StatusOr<RuntimeState>
+LlmLiteRtCompiledModelExecutorBase::GetRuntimeState() const {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Runtime state is not available because the executor context is "
+         "missing.";
+  return llm_context_->runtime_state();
+}
+
+absl::Status LlmLiteRtCompiledModelExecutorBase::UpdateRuntimeState(
+    const RuntimeState& runtime_state) {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Runtime state is not available because the executor context is "
+         "missing.";
+  llm_context_->runtime_state() = runtime_state;
+  return absl::OkStatus();
+}
+
+absl::StatusOr<const ProcessedTokens*>
+LlmLiteRtCompiledModelExecutorBase::GetProcessedTokens() const {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Processed tokens are not available because the executor context is "
+         "missing.";
+  return &llm_context_->processed_context().processed_tokens();
+}
+
+absl::StatusOr<std::unique_ptr<LlmContext>>
+LlmLiteRtCompiledModelExecutorBase::CreateNewContext(
+    std::optional<uint32_t> lora_id, RuntimeConfig runtime_config) const {
+  auto processed_context = std::make_unique<LlmProcessedContext>(
+      std::move(lora_id), absl::flat_hash_map<absl::string_view, TensorBuffer>());
+  auto runtime_state = std::make_unique<RuntimeState>();
+  return std::make_unique<LlmContext>(std::move(processed_context),
+                                      std::make_unique<RuntimeConfig>(
+                                          std::move(runtime_config)),
+                                      std::move(runtime_state));
+}
+
+absl::StatusOr<std::unique_ptr<LlmContext>>
+LlmLiteRtCompiledModelExecutorBase::CloneContext() const {
+  RET_CHECK_NE(llm_context_, nullptr)
+      << "Cannot clone context because the executor context is missing.";
+  auto* processed_context =
+      dynamic_cast<LlmProcessedContext*>(&llm_context_->processed_context());
+  RET_CHECK_NE(processed_context, nullptr)
+      << "Cannot clone context because the executor context type is "
+         "unsupported.";
+  ASSIGN_OR_RETURN(auto processed_context_copy,
+                   CloneLlmProcessedContext(*processed_context));
+  return std::make_unique<LlmContext>(
+      std::move(processed_context_copy),
+      std::make_unique<RuntimeConfig>(llm_context_->runtime_config()),
+      std::make_unique<RuntimeState>(llm_context_->runtime_state()));
+}
+
+absl::Status LlmLiteRtCompiledModelExecutorBase::RestoreContext(
+    std::unique_ptr<LlmContext> context_data) {
+  RET_CHECK_NE(context_data, nullptr)
+      << "Cannot restore a null executor context.";
+  llm_context_ = std::move(context_data);
   return absl::OkStatus();
 }
 

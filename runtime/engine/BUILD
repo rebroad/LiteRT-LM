@@ -65,7 +65,7 @@ cc_library(
 cc_library(
     name = "engine_impl_selected",
     deps = select({
-        "//conditions:default": ["//runtime/core:engine_impl"],
+        "//conditions:default": ["//runtime/core:engine_advanced_impl"],
     }),
 )
 

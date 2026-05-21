@@ -100,6 +100,45 @@ TEST(EngineTest, CreateEngine_WithoutCache) {
   EXPECT_FALSE(responses->GetTexts()[0].empty());
 }
 
+TEST(EngineTest, CreateEngine_AllowsTwoLiveSessions) {
+  auto task_path =
+      std::filesystem::path(::testing::SrcDir()) /
+      "litert_lm/runtime/testdata/test_lm_new_metadata.task";
+  auto model_assets = ModelAssets::Create(task_path.string());
+  ASSERT_OK(model_assets);
+  auto engine_settings =
+      EngineSettings::CreateDefault(*model_assets, Backend::CPU);
+  ASSERT_OK(engine_settings);
+  engine_settings->GetMutableMainExecutorSettings().SetMaxNumTokens(
+      kMaxNumTokens);
+  engine_settings->GetMutableMainExecutorSettings().SetCacheDir(":nocache");
+
+  absl::StatusOr<std::unique_ptr<Engine>> llm = CreateEngine(*engine_settings);
+  ABSL_CHECK_OK(llm);
+
+  absl::StatusOr<std::unique_ptr<Engine::Session>> session1 =
+      (*llm)->CreateSession(SessionConfig::CreateDefault());
+  ABSL_CHECK_OK(session1);
+  absl::StatusOr<std::unique_ptr<Engine::Session>> session2 =
+      (*llm)->CreateSession(SessionConfig::CreateDefault());
+  ABSL_CHECK_OK(session2);
+
+  std::vector<InputData> inputs;
+  inputs.emplace_back(InputText("Hello world!"));
+
+  ABSL_CHECK_OK((*session1)->RunPrefill(inputs));
+  auto responses1 = (*session1)->RunDecode();
+  ASSERT_OK(responses1);
+  EXPECT_EQ(responses1->GetTexts().size(), 1);
+  EXPECT_FALSE(responses1->GetTexts()[0].empty());
+
+  ABSL_CHECK_OK((*session2)->RunPrefill(inputs));
+  auto responses2 = (*session2)->RunDecode();
+  ASSERT_OK(responses2);
+  EXPECT_EQ(responses2->GetTexts().size(), 1);
+  EXPECT_FALSE(responses2->GetTexts()[0].empty());
+}
+
 TEST(EngineTest, CreateEngine_WithNoParallelFileSectionLoading_RunsInference) {
   auto task_path =
       std::filesystem::path(::testing::SrcDir()) /
@@ -387,12 +426,14 @@ TEST(EngineTest, CreateEngine_FailsNoVisionModel) {
   EXPECT_THAT(
       llm->CreateSession(session_config),
       testing::AnyOf(testing::status::StatusIs(
+                         absl::StatusCode::kInvalidArgument,
+                         "Vision executor backend is not supported."),
+                     testing::status::StatusIs(
                          absl::StatusCode::kNotFound,
                          "TF_LITE_VISION_ENCODER not found in the model."),
                      testing::status::StatusIs(
                          absl::StatusCode::kNotFound,
-                         testing::HasSubstr(
-                             "No file with name: TF_LITE_VISION_ENCODER."))));
+                         "No file with name: TF_LITE_VISION_ENCODER.")));
 }
 
 TEST(EngineTest, CreateEngine_FailsNoAudioModel) {
@@ -410,10 +451,14 @@ TEST(EngineTest, CreateEngine_FailsNoAudioModel) {
   ASSERT_OK_AND_ASSIGN(auto llm, CreateEngine(*engine_settings));
   SessionConfig session_config = SessionConfig::CreateDefault();
   session_config.SetAudioModalityEnabled(true);
-  EXPECT_THAT(llm->CreateSession(session_config),
-              testing::status::StatusIs(
-                  absl::StatusCode::kNotFound,
-                  "TF_LITE_AUDIO_ENCODER_HW not found in the model."));
+  EXPECT_THAT(
+      llm->CreateSession(session_config),
+      testing::AnyOf(testing::status::StatusIs(
+                         absl::StatusCode::kInvalidArgument,
+                         "Audio executor backend is not supported."),
+                     testing::status::StatusIs(
+                         absl::StatusCode::kNotFound,
+                         "TF_LITE_AUDIO_ENCODER_HW not found in the model.")));
 }
 
 // TODO (b/397975034): Add more tests for Engine.

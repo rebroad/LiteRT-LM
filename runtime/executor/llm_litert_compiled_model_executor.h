@@ -107,6 +107,21 @@ class LlmLiteRtCompiledModelExecutorBase : public LlmExecutor {
     return llm_context_->runtime_state().current_step;
   }
 
+  absl::StatusOr<RuntimeConfig> GetRuntimeConfig() const override;
+  absl::Status UpdateRuntimeConfig(
+      const RuntimeConfig& runtime_config) override;
+  absl::StatusOr<RuntimeState> GetRuntimeState() const override;
+  absl::Status UpdateRuntimeState(
+      const RuntimeState& runtime_state) override;
+  absl::StatusOr<const ProcessedTokens*> GetProcessedTokens() const override;
+
+  absl::StatusOr<std::unique_ptr<LlmContext>> CreateNewContext(
+      std::optional<uint32_t> lora_id,
+      RuntimeConfig runtime_config) const override;
+  absl::StatusOr<std::unique_ptr<LlmContext>> CloneContext() const override;
+  absl::Status RestoreContext(
+      std::unique_ptr<LlmContext> context_data) override;
+
   // Sets the current step of the executor.
   absl::Status SetCurrentStep(int new_step) override;
 
