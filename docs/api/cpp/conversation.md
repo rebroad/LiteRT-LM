@@ -7,6 +7,17 @@ processing tasks. These tasks include maintaining the initial context, managing
 tool definitions, preprocessing multimodal data, and applying Jinja prompt
 templates with role-based message formatting.
 
+If you are deciding between the two APIs:
+
+- Use [`Session`][Session] when you want direct control over the low-level
+  decode loop and have already prepared the exact input tensors / contents you
+  want to send.
+- Use [`Conversation`][Conversation] when you want chat-style interaction,
+  prompt templating, tool handling, or multimodal preprocessing.
+
+In other words: `Session` is the primitive; `Conversation` is the convenience
+layer built on top of it.
+
 ## Conversation API Workflow
 
 The typical lifecycle for using the Conversation API is:

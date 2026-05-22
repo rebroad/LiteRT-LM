@@ -19,15 +19,23 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Manages the lifecycle of a LiteRT-LM session, providing an interface for interacting with the
- * native library.
+ * Low-level stateful decode engine for a single live interaction.
+ *
+ * `Session` is the closest Kotlin wrapper around the native engine session. It owns the runtime
+ * state used for prefill / decode, including the KV cache and incremental generation state. Use
+ * this when you want direct control over multimodal input chunks, turn-by-turn generation, or
+ * server-side session ownership.
+ *
+ * If you want higher-level chat behavior such as prompt templating, tool handling, message history
+ * management, or multimodal preprocessing, prefer [Conversation] instead. A [Conversation] may
+ * create and manage its own [Session] internally.
  *
  * @param handle The pointer to the underlying native session object.
  */
 class Session(private val handle: Long) : AutoCloseable {
   private val _isAlive = AtomicBoolean(true)
 
-  /** Whether the session is alive and ready to be used, */
+  /** Whether the session is alive and ready to be used. */
   val isAlive: Boolean
     get() = _isAlive.get()
 

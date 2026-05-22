@@ -218,6 +218,14 @@ internal object LiteRtLmJni {
   external fun nativeDeleteConversation(conversationPointer: Long)
 
   /**
+   * Clones an existing LiteRT-LM conversation.
+   *
+   * @param conversationPointer A pointer to the native conversation instance.
+   * @return A pointer to the cloned native conversation instance.
+   */
+  external fun nativeCloneConversation(conversationPointer: Long): Long
+
+  /**
    * Send message from the given input data asynchronously.
    *
    * <p>The [callback] will only receive callback if this method returns normally.

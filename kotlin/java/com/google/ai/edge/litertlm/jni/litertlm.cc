@@ -952,6 +952,21 @@ LITERTLM_JNIEXPORT void JNICALL JNI_METHOD(nativeDeleteConversation)(
   delete reinterpret_cast<Conversation*>(conversation_pointer);
 }
 
+LITERTLM_JNIEXPORT jlong JNICALL JNI_METHOD(nativeCloneConversation)(
+    JNIEnv* env, jclass thiz, jlong conversation_pointer) {
+  Conversation* conversation =
+      reinterpret_cast<Conversation*>(conversation_pointer);
+
+  auto cloned_conversation = conversation->Clone();
+  if (!cloned_conversation.ok()) {
+    ThrowLiteRtLmJniException(env, "Failed to clone conversation: " +
+                                       cloned_conversation.status().ToString());
+    return 0;
+  }
+
+  return reinterpret_cast<jlong>(cloned_conversation->release());
+}
+
 LITERTLM_JNIEXPORT void JNICALL JNI_METHOD(nativeSendMessageAsync)(
     JNIEnv* env, jclass thiz, jlong conversation_pointer,
     jstring messageJSONString, jstring extraContextJsonString, jobject callback,

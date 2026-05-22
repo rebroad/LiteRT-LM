@@ -25,7 +25,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
 /**
- * Represents a conversation with the LiteRT-LM model.
+ * High-level chat and multimodal conversation wrapper.
+ *
+ * `Conversation` is the ergonomic API for most app code. It maintains the message history, applies
+ * prompt templates and tool calling, and preprocesses multimodal inputs before delegating to a
+ * lower-level [Session]. Prefer this when you want chat-style interactions, multimodal message
+ * handling, tool use, or any request path that should look like a conversation rather than a raw
+ * decode loop.
+ *
+ * If you need direct control over a single decode session without the higher-level message/history
+ * machinery, use [Session] directly instead.
  *
  * Example usage:
  * ```kotlin
@@ -462,6 +471,23 @@ class Conversation(
   /** Throws [IllegalStateException] if the conversation is not alive. */
   private fun checkIsAlive() {
     check(isAlive) { "Conversation is not alive." }
+  }
+
+  /**
+   * Creates a deep clone of this conversation, including the underlying native session state.
+   *
+   * The cloned conversation can continue independently from the current point in the history.
+   *
+   * @throws IllegalStateException if the conversation has already been closed.
+   * @throws LiteRtLmJniException if cloning fails in the native layer.
+   */
+  fun cloneConversation(): Conversation {
+    checkIsAlive()
+    return Conversation(
+      LiteRtLmJni.nativeCloneConversation(handle),
+      toolManager,
+      automaticToolCalling,
+    )
   }
 
   companion object {

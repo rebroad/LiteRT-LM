@@ -127,6 +127,16 @@ val engineConfig = EngineConfig(
 Once the engine is initialized, create a `Conversation` instance. You can
 provide a `ConversationConfig` to customize its behavior.
 
+If you are choosing between the two main stateful APIs:
+
+- Use `Session` when you want the lowest-level decode loop and you already have
+  your own prompt assembly / multimodal preprocessing.
+- Use `Conversation` when you want the higher-level chat API, tool handling,
+  prompt templating, or multimodal preprocessing managed for you.
+
+Most application code should use `Conversation`. `Session` is the more direct
+primitive, and `Conversation` may internally manage a `Session` for you.
+
 ```kotlin
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Message
